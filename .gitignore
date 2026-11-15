@@ -1,1 +1,15 @@
-# test
+# Build outputs
+build/
+*.xcarchive
+*.ipa
+DerivedData/
+
+# XcodeGen output (sinh lại bằng `xcodegen generate`)
+*.xcodeproj
+*.xcworkspace
+
+# macOS
+.DS_Store
+
+# Không commit file đã ký bằng cert cá nhân
+*.mobileprovision
