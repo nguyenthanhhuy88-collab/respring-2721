@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- Respring 27 entitlements — cố tình TỐI GIẢN.
+     App không cần bất kỳ entitlement nào (không App Group, không push,
+     không keychain sharing). Đặc biệt KHÔNG có entitlement private nào
+     (platform-application, com.apple.private.*, com.apple.springboard.*):
+     chứng chỉ Developer không cấp được các entitlement đó, và khai vào
+     đây chỉ làm app bị từ chối ký / crash lúc mở. -->
+<plist version="1.0">
+<dict>
+</dict>
+</plist>
