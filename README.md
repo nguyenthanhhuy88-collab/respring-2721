@@ -110,9 +110,9 @@ Script sẽ: `xcodegen generate` → `xcodebuild archive` với
    màn hình chỉ toàn màu đen trong lúc chạy.
 3. Đợi tối đa ~20 giây: nếu thành công, màn hình đen vài giây rồi về
    Màn hình khóa — xong.
-4. Nếu app hiện bảng lỗi (timeout / không có payload / lỗi): bấm
-   **THỬ LẠI** trong bảng đó, rồi dùng nút **"Cách khác nếu không
-   respring được"**:
+4. Nếu mở app mà máy không respring (màn hình đen một lúc rồi tự
+   thoát ra): vuốt thoát app rồi mở lại để thử lần nữa. Nếu vẫn không
+   được thì respring bằng tay:
    - **Display Zoom** (chắc ăn nhất): Cài đặt → Màn hình & Độ sáng →
      Thu phóng màn hình → đổi qua lại → Áp dụng.
    - **Kéo widget** (iOS 27.0/27.0.1, trên 27.2.1 chưa xác nhận): giữ
@@ -134,9 +134,9 @@ respring-2721/
 ├── .github/workflows/build-ipa.yml   # build IPA chưa ký trên GitHub Actions
 └── Respring/
     ├── RespringApp.swift        # entry point
-    ├── ContentView.swift        # không giao diện: mở app là tự chạy; chỉ hiện bảng lỗi khi thất bại
+    ├── ContentView.swift        # không giao diện, không nút: mở app là tự chạy
     ├── NeoSpring.swift          # harness WKWebView NeoSpring + model + timeout
-    ├── NeoSpringPayload.html    # PLACEHOLDER — thay bằng payload thật (xem trên)
+    ├── NeoSpringPayload.html    # payload thật (GestaltX, GPL-3.0)
     ├── FallbackGuide.swift      # hướng dẫn Display Zoom + kéo widget
     ├── Info.plist               # bundle com.harry.respring2721, iOS 17.0+
     ├── Respring27.entitlements  # trống — app không cần entitlement nào
