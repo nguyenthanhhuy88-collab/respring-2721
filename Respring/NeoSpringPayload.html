@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<!--
+  NeoSpringPayload.html — PLACEHOLDER (trang chờ, không gây respring).
+
+  File này là chỗ để gắn payload NeoSpring THẬT. Hiện tại nó chỉ là một
+  trang đen trống, cố tình KHÔNG chứa workload gây crash nào, để app không
+  giả vờ respring được khi chưa có payload.
+
+  Muốn bật respring thật, thay TOÀN BỘ nội dung file này bằng tài liệu HTML
+  NeoSpring từ nguồn upstream (xem README.md, mục "Thêm payload NeoSpring"):
+    1. https://github.com/rooootdev/neospring — dự án NeoSpring gốc
+       (kỹ thuật: @neonmodder123, Swift: @skadz108, dự án: @rooootdev)
+    2. Hoặc chuỗi `document` trong GestaltX/GestaltX/NeoSpringView.swift
+       (GPL-3.0, https://github.com/huamidev/GestaltX) — bản đã sửa lỗi
+       escaping và kích thước random-data request.
+
+  Tài liệu thay vào PHẢI định nghĩa 2 hàm toàn cục:
+    - window.startNeoSpring() -> bắt đầu workload, trả về true/false
+    - window.stopNeoSpring()  -> dừng workload (để hủy)
+
+  App sẽ tự kiểm tra `typeof window.startNeoSpring === 'function'` trước
+  khi start; nếu không có thì báo "Chưa có payload" thay vì treo máy.
+
+  CẢNH BÁO: payload NeoSpring cố tình làm quá tải WebKit GPU process để
+  SpringBoard restart. Chỉ dùng trên máy của chính bạn, đã sao lưu trước,
+  và không chạy khi máy đang làm việc quan trọng. Trên iOS 27.2.1 trạng thái
+  CHƯA XÁC NHẬN (đã test tới 27.2 beta 2 theo AirCard-iOS).
+-->
+<html>
+  <head><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+  <body style="margin:0;background:#000"></body>
+</html>
