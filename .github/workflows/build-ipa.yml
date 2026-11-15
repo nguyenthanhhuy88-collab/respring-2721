@@ -1,0 +1,39 @@
+name: Build unsigned IPA
+
+# Build IPA CHƯA KÝ cho Respring 27 trên GitHub Actions.
+# Chạy khi push tag v* (vd: v1.0.0) hoặc chạy tay (workflow_dispatch).
+# Kết quả: artifact "Respring27-unsigned-ipa" chứa Respring27-unsigned.ipa.
+# File này CHƯA ký — tải về rồi ký bằng Feather với chứng chỉ Developer
+# của bạn (xem README.md, mục "Cài bằng Feather").
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    runs-on: macos-26
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Chọn Xcode 26
+        run: |
+          ls /Applications | grep -i xcode
+          sudo xcode-select -s /Applications/Xcode_26.app/Contents/Developer || sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          xcodebuild -version
+
+      - name: Cài XcodeGen
+        run: brew install xcodegen
+
+      - name: Build IPA chưa ký
+        run: bash build-ipa.sh
+
+      - name: Upload IPA chưa ký
+        uses: actions/upload-artifact@v4
+        with:
+          name: Respring27-unsigned-ipa
+          path: build/Respring27-unsigned.ipa
+          if-no-files-found: error
+          retention-days: 30
