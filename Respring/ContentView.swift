@@ -8,6 +8,7 @@ struct ContentView: View {
     @State private var showNeoSpring = false
     @State private var showFallback = false
     @State private var showAbout = false
+    @State private var autoStarted = false
 
     var body: some View {
         NavigationStack {
@@ -38,6 +39,20 @@ struct ContentView: View {
             .onChange(of: model.isRunning) { _, running in
                 if !running { showNeoSpring = false }
             }
+            .onAppear {
+                // Auto-respring: mở app là tự chạy luôn, không cần bấm nút.
+                // Chỉ chạy 1 lần mỗi lần mở app; delay 0.6s để view hiện xong
+                // rồi mới present fullScreenCover (tránh present quá sớm).
+                // Nếu lần auto này timeout/thất bại, cover tự đóng và nút
+                // RESPRING vẫn ở đó để bấm tay thử lại.
+                guard !autoStarted else { return }
+                autoStarted = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    guard !model.isRunning else { return }
+                    model.start()
+                    showNeoSpring = true
+                }
+            }
         }
     }
 
@@ -48,7 +63,7 @@ struct ContentView: View {
             Text("iPhone 17 Pro Max • \(model.isiOSVersionString)")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-            Text("Dùng kỹ thuật NeoSpring (WebKit GPU process). Trạng thái trên iOS 27.2.1: CHƯA XÁC NHẬN — đã test tới iOS 27.2 beta 2 theo AirCard-iOS. Nếu không respring được thì dùng cách tay ở dưới.")
+            Text("Dùng kỹ thuật NeoSpring (WebKit GPU process). Đã xác nhận chạy trên iOS 27.2.1 — test thật 15/11/2026 trên iPhone 17 Pro Max. Mở app là tự respring luôn, không cần bấm nút.")
                 .font(.callout)
                 .foregroundStyle(.orange)
         }
@@ -95,7 +110,7 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
                     if model.logLines.isEmpty {
-                        Text("Chưa có log. Bấm RESPRING để thử.")
+                        Text("Chưa có log. App sẽ tự respring khi mở — nếu không được thì bấm RESPRING để thử lại.")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(model.logLines, id: \.self) { line in
@@ -133,9 +148,9 @@ private struct AboutView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    Text("Respring 27 — v1.0.0")
+                    Text("Respring 27 — v1.1.0")
                         .font(.title3).bold()
-                    Text("App respring tối giản cho iOS 27.2.1, dùng kỹ thuật NeoSpring qua WebKit GPU process. Không dùng killall / FBSystemService (sandbox chặn), không xin entitlement private, không cần jailbreak.")
+                    Text("App respring tối giản cho iOS 27.2.1, dùng kỹ thuật NeoSpring qua WebKit GPU process. Mở app là tự respring luôn (v1.1.0). Không dùng killall / FBSystemService (sandbox chặn), không xin entitlement private, không cần jailbreak.")
                     Text("Credit")
                         .font(.headline)
                     Text("• Kỹ thuật WebKit GPU respring: @neonmodder123\n• Swift implementation: @skadz108\n• Dự án NeoSpring: @rooootdev — github.com/rooootdev/neospring\n• Harness tham chiếu: GestaltX (GPL-3.0) — github.com/huamidev/GestaltX\n• AirCard-iOS (MIT) — github.com/Mak5er/AirCard-iOS")

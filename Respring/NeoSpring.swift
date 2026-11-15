@@ -94,7 +94,7 @@ final class NeoSpringModel: ObservableObject {
         isRunning = true
         status = .running
         log("Bắt đầu thử NeoSpring trên \(isiOSVersionString).")
-        log("Lưu ý: NeoSpring đã test tới iOS 27.2 beta 2 (AirCard-iOS). Trên iOS 27.2.1 CHƯA XÁC NHẬN.")
+        log("Đã xác nhận chạy trên iOS 27.2.1 (test thật 15/11/2026, iPhone 17 Pro Max).")
     }
 
     /// Được NeoSpringView gọi khi payload đã start thành công.
