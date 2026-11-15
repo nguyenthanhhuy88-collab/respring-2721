@@ -1,5 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// ContentView.swift — Giao diện chính (tiếng Việt) của Respring 27.
+// ContentView.swift — Respring 27 v1.2.0: KHÔNG có giao diện.
+//
+// Mở app là tự respring luôn, không nút, không chữ, không màn hình chờ.
+// Màn hình chỉ toàn màu đen trong lúc chạy. Chỉ khi lần chạy đó thất bại
+// (timeout / không có payload / lỗi) thì app mới hiện một bảng lỗi tối
+// giản: trạng thái + log + nút THỬ LẠI + đường dẫn "Cách khác".
 
 import SwiftUI
 
@@ -7,89 +12,69 @@ struct ContentView: View {
     @EnvironmentObject private var model: NeoSpringModel
     @State private var showNeoSpring = false
     @State private var showFallback = false
-    @State private var showAbout = false
     @State private var autoStarted = false
 
+    /// True khi lần chạy vừa rồi kết thúc mà KHÔNG respring được
+    /// (lúc đó mới hiện bảng lỗi; đường chạy bình thường không thấy gì).
+    private var showErrorPanel: Bool {
+        !model.isRunning && model.status != .idle && model.status != .started
+    }
+
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    header
-                    statusCard
-                    respringButton
-                    logCard
-                    fallbackButton
-                    aboutButton
-                }
-                .padding()
-            }
-            .navigationTitle("Respring 27")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showAbout = true } label: {
-                        Image(systemName: "info.circle")
+        ZStack {
+            Color.black.ignoresSafeArea()
+            if showErrorPanel {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
+                        statusCard
+                        retryButton
+                        logCard
+                        fallbackButton
                     }
+                    .padding()
                 }
             }
-            .sheet(isPresented: $showFallback) { FallbackGuideView() }
-            .sheet(isPresented: $showAbout) { AboutView() }
-            .fullScreenCover(isPresented: $showNeoSpring) {
-                NeoSpringView(model: model)
-            }
-            .onChange(of: model.isRunning) { _, running in
-                if !running { showNeoSpring = false }
-            }
-            .onAppear {
-                // Auto-respring: mở app là tự chạy luôn, không cần bấm nút.
-                // Chỉ chạy 1 lần mỗi lần mở app; delay 0.6s để view hiện xong
-                // rồi mới present fullScreenCover (tránh present quá sớm).
-                // Nếu lần auto này timeout/thất bại, cover tự đóng và nút
-                // RESPRING vẫn ở đó để bấm tay thử lại.
-                guard !autoStarted else { return }
-                autoStarted = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-                    guard !model.isRunning else { return }
-                    model.start()
-                    showNeoSpring = true
-                }
+        }
+        .fullScreenCover(isPresented: $showNeoSpring) {
+            NeoSpringView(model: model)
+        }
+        .onChange(of: model.isRunning) { _, running in
+            if !running { showNeoSpring = false }
+        }
+        .sheet(isPresented: $showFallback) { FallbackGuideView() }
+        .onAppear {
+            // Mở app là chạy luôn, chỉ 1 lần mỗi lần mở app.
+            // Delay 0.3s để view gắn xong rồi mới present cover.
+            guard !autoStarted else { return }
+            autoStarted = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                guard !model.isRunning else { return }
+                model.start()
+                showNeoSpring = true
             }
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Respring cho iOS 27.2.1")
-                .font(.title2).bold()
-            Text("iPhone 17 Pro Max • \(model.isiOSVersionString)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-            Text("Dùng kỹ thuật NeoSpring (WebKit GPU process). Đã xác nhận chạy trên iOS 27.2.1 — test thật 15/11/2026 trên iPhone 17 Pro Max. Mở app là tự respring luôn, không cần bấm nút.")
-                .font(.callout)
-                .foregroundStyle(.orange)
-        }
-    }
+    // --- Chỉ dùng khi lần auto chạy thất bại ---
 
     private var statusCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Trạng thái").font(.headline)
+            Text("Không respring được").font(.headline)
+                .foregroundStyle(.white)
             Text(model.status.label)
-            if model.status == .payloadMissing {
-                Text("File NeoSpringPayload.html kèm theo app hiện chỉ là placeholder. Muốn respring thật, thêm payload NeoSpring theo README.md rồi build lại.")
-                    .font(.callout)
-                    .foregroundStyle(.red)
-            }
+                .foregroundStyle(.white.opacity(0.8))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.quaternary, in: RoundedRectangle(cornerRadius: 14))
     }
 
-    private var respringButton: some View {
+    private var retryButton: some View {
         Button {
             model.start()
             showNeoSpring = true
         } label: {
-            Text("RESPRING")
+            Text("THỬ LẠI")
                 .font(.title.bold())
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 18)
@@ -103,6 +88,7 @@ struct ContentView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Nhật ký").font(.headline)
+                    .foregroundStyle(.white)
                 Spacer()
                 Button("Xóa log") { model.clearLog() }
                     .font(.callout)
@@ -110,11 +96,12 @@ struct ContentView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 4) {
                     if model.logLines.isEmpty {
-                        Text("Chưa có log. App sẽ tự respring khi mở — nếu không được thì bấm RESPRING để thử lại.")
+                        Text("Chưa có log.")
                             .foregroundStyle(.secondary)
                     } else {
                         ForEach(model.logLines, id: \.self) { line in
                             Text(line).font(.system(.footnote, design: .monospaced))
+                                .foregroundStyle(.white.opacity(0.85))
                         }
                     }
                 }
@@ -132,40 +119,6 @@ struct ContentView: View {
         }
         .buttonStyle(.bordered)
         .frame(maxWidth: .infinity)
-    }
-
-    private var aboutButton: some View {
-        Button("Giới thiệu & credit") {
-            showAbout = true
-        }
-        .font(.callout)
-        .frame(maxWidth: .infinity)
-    }
-}
-
-private struct AboutView: View {
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Respring 27 — v1.1.0")
-                        .font(.title3).bold()
-                    Text("App respring tối giản cho iOS 27.2.1, dùng kỹ thuật NeoSpring qua WebKit GPU process. Mở app là tự respring luôn (v1.1.0). Không dùng killall / FBSystemService (sandbox chặn), không xin entitlement private, không cần jailbreak.")
-                    Text("Credit")
-                        .font(.headline)
-                    Text("• Kỹ thuật WebKit GPU respring: @neonmodder123\n• Swift implementation: @skadz108\n• Dự án NeoSpring: @rooootdev — github.com/rooootdev/neospring\n• Harness tham chiếu: GestaltX (GPL-3.0) — github.com/huamidev/GestaltX\n• AirCard-iOS (MIT) — github.com/Mak5er/AirCard-iOS")
-                    Text("Giấy phép: GNU GPL v3 (xem file LICENSE).")
-                        .font(.callout)
-                        .foregroundStyle(.secondary)
-                    Text("Cảnh báo: sao lưu máy trước khi thử. Kỹ thuật này cố tình làm SpringBoard restart; nếu màn hình đơ thì force restart (Tăng âm lượng → Giảm âm lượng → giữ nút Sườn). Tác giả không chịu trách nhiệm nếu máy gặp sự cố.")
-                        .font(.callout)
-                        .foregroundStyle(.orange)
-                }
-                .padding()
-            }
-            .navigationTitle("Giới thiệu")
-            .navigationBarTitleDisplayMode(.inline)
-        }
     }
 }
 

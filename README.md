@@ -1,18 +1,18 @@
 # Respring 27 — App respring cho iOS 27.2.1
 
-App iOS tối giản: bấm nút **RESPRING** để thử restart SpringBoard trên
-iOS 27.2.1 (iPhone 17 Pro Max), dùng kỹ thuật **NeoSpring** (WebKit GPU
-process). Không jailbreak, không cần máy tính sau khi cài.
+App iOS tối giản: **mở app là tự respring luôn, không có giao diện** —
+không nút, không chữ, màn hình chỉ toàn màu đen trong lúc chạy. Dùng kỹ
+thuật **NeoSpring** (WebKit GPU process). Không jailbreak, không cần máy
+tính sau khi cài.
 
-> **Đọc trước — nói thẳng:**
-> - **Trên iOS 27.2.1, NeoSpring CHƯA XÁC NHẬN.** AirCard-iOS ghi đã test
->   tới **iOS 27.2 beta 2**; từ 27.2 beta 3 Apple vá đường `airlift`
->   (đường truyền file, không phải NeoSpring). Tác giả `worse_query`
->   nói 27.2.1 chưa vá sandbox escape, nhưng đó là chuyện khác —
->   `worse_query` chỉ cho đọc/ghi file, không tự respring.
+> **Đã xác nhận chạy trên iOS 27.2.1** — test thật 15/11/2026 trên
+> iPhone 17 Pro Max: bấm RESPRING (bản v1.0.0) là respring được luôn.
+> AirCard-iOS ghi đã test tới **iOS 27.2 beta 2**; từ 27.2 beta 3 Apple
+> vá đường `airlift` (đường truyền file, không phải NeoSpring).
 > - App này **không hứa chắc chắn respring được trên 27.2.1**. Nó thử
 >   NeoSpring một cách trung thực, ghi log đầy đủ, và nếu không được thì
->   hướng dẫn bạn respring bằng tay (Display Zoom). Đừng kỳ vọng 100%.
+>   hiện bảng lỗi với nút thử lại + hướng dẫn respring bằng tay
+>   (Display Zoom). Đừng kỳ vọng 100%.
 > - **Chưa có file IPA trong repo này.** Môi trường làm project là Linux,
 >   không có Xcode nên không biên dịch được IPA. IPA chưa ký được build
 >   bằng GitHub Actions (xem dưới) — **không có IPA giả** trong repo.
@@ -46,13 +46,15 @@ Credit: kỹ thuật @neonmodder123, Swift @skadz108, dự án NeoSpring
 @rooootdev — https://github.com/rooootdev/neospring. Harness tham chiếu
 từ GestaltX (GPL-3.0).
 
-## ⚠️ Thêm payload NeoSpring — BẮT BUỘC trước khi build
+## ⚠️ Payload NeoSpring — đã có payload thật
 
-File `Respring/NeoSpringPayload.html` kèm theo hiện chỉ là **trang chờ
-trống** (placeholder, không gây respring). App sẽ tự kiểm tra và báo
-"Chưa có payload" thay vì giả vờ chạy được.
+File `Respring/NeoSpringPayload.html` hiện chứa **payload thật** lấy từ
+chuỗi `document` trong `GestaltX/NeoSpringView.swift` (GPL-3.0,
+commit `9984e6a`, 2.397 byte, định nghĩa `window.startNeoSpring()` /
+`window.stopNeoSpring()`). App kiểm tra và báo "Chưa có payload" nếu
+file bị thay bằng placeholder.
 
-Để bật respring thật, thay toàn bộ nội dung file đó bằng tài liệu HTML
+Muốn thay payload khác, thay toàn bộ nội dung file đó bằng tài liệu HTML
 NeoSpring từ nguồn upstream, tài liệu đó phải định nghĩa:
 - `window.startNeoSpring()` — bắt đầu workload
 - `window.stopNeoSpring()` — dừng workload
@@ -63,10 +65,6 @@ Lấy ở một trong hai chỗ:
    GestaltX: https://github.com/huamidev/GestaltX (GPL-3.0 — nếu dùng
    bản này thì app build ra vẫn thuộc GPL-3.0, đúng như license của
    project này).
-
-Lý do không nhúng sẵn: file payload của AirCard-iOS không đọc được trong
-môi trường làm project này, nên không sao chép bừa từ trí nhớ. Bạn tự lấy
-từ nguồn chính chủ ở trên là chắc ăn nhất.
 
 ## Build IPA chưa ký
 
@@ -108,11 +106,13 @@ Script sẽ: `xcodegen generate` → `xcodebuild archive` với
 ## Cách dùng
 
 1. **Sao lưu iPhone trước** (iCloud hoặc máy tính).
-2. Mở app **Respring 27** → bấm nút đỏ **RESPRING**.
+2. Mở app **Respring 27** — app tự respring luôn, không cần bấm gì,
+   màn hình chỉ toàn màu đen trong lúc chạy.
 3. Đợi tối đa ~20 giây: nếu thành công, màn hình đen vài giây rồi về
    Màn hình khóa — xong.
-4. Nếu app báo timeout / không có payload / lỗi: xem log trong app,
-   thử lại 1 lần, rồi dùng tab **"Cách khác nếu không respring được"**:
+4. Nếu app hiện bảng lỗi (timeout / không có payload / lỗi): bấm
+   **THỬ LẠI** trong bảng đó, rồi dùng nút **"Cách khác nếu không
+   respring được"**:
    - **Display Zoom** (chắc ăn nhất): Cài đặt → Màn hình & Độ sáng →
      Thu phóng màn hình → đổi qua lại → Áp dụng.
    - **Kéo widget** (iOS 27.0/27.0.1, trên 27.2.1 chưa xác nhận): giữ
@@ -134,7 +134,7 @@ respring-2721/
 ├── .github/workflows/build-ipa.yml   # build IPA chưa ký trên GitHub Actions
 └── Respring/
     ├── RespringApp.swift        # entry point
-    ├── ContentView.swift        # UI tiếng Việt: nút RESPRING, log, trạng thái
+    ├── ContentView.swift        # không giao diện: mở app là tự chạy; chỉ hiện bảng lỗi khi thất bại
     ├── NeoSpring.swift          # harness WKWebView NeoSpring + model + timeout
     ├── NeoSpringPayload.html    # PLACEHOLDER — thay bằng payload thật (xem trên)
     ├── FallbackGuide.swift      # hướng dẫn Display Zoom + kéo widget

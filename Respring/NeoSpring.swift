@@ -158,10 +158,11 @@ final class NeoSpringModel: ObservableObject {
     }
 }
 
-/// Màn hình chạy NeoSpring: nền đen + WKWebView toàn màn hình (ẩn tương tác).
+/// Màn hình chạy NeoSpring: chỉ toàn màu đen + WKWebView toàn màn hình
+/// (ẩn tương tác). Không có chữ, không có nút — mở app là chạy.
+/// Nếu timeout/thất bại, cover tự đóng và ContentView hiện bảng lỗi.
 struct NeoSpringView: View {
     @ObservedObject var model: NeoSpringModel
-    @Environment(\.dismiss) private var dismiss
 
     @State private var hasStarted = false
     @State private var showWebView = false
@@ -184,28 +185,6 @@ struct NeoSpringView: View {
                 .accessibilityHidden(true)
             }
             #endif
-            VStack(spacing: 18) {
-                if model.isRunning {
-                    ProgressView().tint(.white).controlSize(.large)
-                }
-                Text(model.status.label)
-                    .font(.headline)
-                    .multilineTextAlignment(.center)
-                Text("Máy có thể quay về Màn hình khóa trong giây lát. Nếu màn hình đơ quá 30 giây thì force restart: Bấm nhả Tăng âm lượng → bấm nhả Giảm âm lượng → giữ nút Sườn tới khi hiện logo Apple.")
-                    .font(.subheadline)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(.white.opacity(0.65))
-                Button("Hủy") {
-                    model.cancel()
-                    dismiss()
-                }
-                .buttonStyle(.bordered)
-                .tint(.white)
-                .padding(.top, 8)
-            }
-            .foregroundStyle(.white)
-            .padding(32)
-            .frame(maxWidth: 440)
         }
         .task {
             #if targetEnvironment(simulator)
