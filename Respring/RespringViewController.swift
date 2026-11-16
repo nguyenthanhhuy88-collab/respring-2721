@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-only
-// RespringViewController.swift — Respring v1.2
+// RespringViewController.swift — Respring v1.3
 //
 // Harness WKWebView cho kỹ thuật NeoSpring (WebKit GPU process respring).
 //
@@ -7,34 +7,35 @@
 // - Kỹ thuật gốc (WebKit GPU process respring): @neonmodder123
 // - Swift implementation: @skadz108
 // - Dự án NeoSpring: @rooootdev — https://github.com/rooootdev/neospring
-// - Bản thích ứng tham chiếu: GestaltX, file GestaltX/NeoSpringView.swift,
-//   GPL-3.0 — https://github.com/huamidev/GestaltX (xem THIRD_PARTY_NOTICES.md).
+// - Bản thích ứng tham chiếu (cấu trúc harness, chờ view có kích thước thật
+//   rồi mới start): GestaltX, file GestaltX/NeoSpringView.swift, GPL-3.0 —
+//   https://github.com/huamidev/GestaltX (xem THIRD_PARTY_NOTICES.md).
 //
 // Payload HTML/JS thật của NeoSpring (định nghĩa window.startNeoSpring() /
 // window.stopNeoSpring()) nằm trong file bundle `NeoSpringPayload.html` —
-// file này KHÔNG chứa payload gây crash, và KHÔNG bị sửa đổi ở đây.
+// file này KHÔNG chứa payload gây crash.
 //
-// Tối ưu tốc độ — bấm icon là respring nhanh nhất có thể:
-// 1. Không chờ gì ở phía native: vừa load HTML là payload TỰ GỌI
-//    window.startNeoSpring() ngay trong lúc parse (script chèn cuối trang),
-//    không chờ didFinish, không chờ viewDidAppear, không evaluateJavaScript
-//    từ native. startNeoSpring() tự chờ 2 nhịp requestAnimationFrame rồi
-//    mới nạp iframe chứa payload — 2 nhịp này là bắt buộc để GPU compositor
-//    chạy, trên iPhone 17 Pro Max 120Hz chỉ ~17ms.
-// 2. WKWebView tạo trong viewDidLoad, load ngay — WebContent process spawn
-//    song song với lúc window hiện lên.
-// 3. didFinish chỉ là lưới an toàn: nếu auto-start chưa chạy thì gọi lại
-//    (startNeoSpring có cờ started nên gọi 2 lần cũng chỉ chạy 1 lần).
-// 4. Không SwiftUI, không delay, không animation chuyển màn, không UI.
-//    Hiệu ứng zoom khi mở app là của iOS, app không tắt được — nhưng với
-//    v1.2 thì respring nổ ra NGAY TRONG lúc animation đang chạy, thay vì
-//    chờ animation chạy xong mới nổ như v1.0/v1.1.
+// V1.3 — QUAY LẠI CÒ TRIGGER ĐÃ CHỨNG MINH CHẠY ĐƯỢC (v1.0/v1.1):
+// v1.2 cho payload tự chạy trong lúc parse đã HỎNG — mở app chỉ đen thui,
+// không respring. Nguyên nhân: startNeoSpring() chờ 2 nhịp
+// requestAnimationFrame mới nạp iframe, mà rAF chỉ tick khi trang đã được
+// vẽ lên màn hình thật; gọi trong lúc parse (trang chưa vẽ lần nào) thì
+// rAF không tick, iframe không bao giờ nạp, không có gì xảy ra. Bài học:
+// KHÔNG tự chạy trong lúc parse — phải chờ trang load xong VÀ view đã hiện
+// (window != nil, bounds > 0) rồi mới gọi, đúng như GestaltX.
+// Khác v1.1 ở 2 chỗ: gộp 2 lần evaluateJavaScript thành 1 lần duy nhất,
+// và thử start ngay ở viewDidLayoutSubviews (sớm hơn viewDidAppear 1 nhịp).
+// Không SwiftUI, không delay, không animation chuyển màn, không UI.
 
 import UIKit
 import WebKit
+import QuartzCore
 
 final class RespringViewController: UIViewController, WKNavigationDelegate {
     private var webView: WKWebView!
+    private var pageLoaded = false
+    private var viewAppeared = false
+    private var startRequested = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -55,31 +56,60 @@ final class RespringViewController: UIViewController, WKNavigationDelegate {
         view.addSubview(webView)
         self.webView = webView
 
-        webView.loadHTMLString(Self.autoStartHTML, baseURL: nil)
+        webView.loadHTMLString(Self.payloadHTML, baseURL: nil)
     }
 
-    // Lưới an toàn: nếu auto-start trong HTML chưa chạy thì gọi lại ở đây.
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        viewAppeared = true
+        startIfReady()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        startIfReady()
+    }
+
+    // MARK: - WKNavigationDelegate
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
-        webView.evaluateJavaScript("typeof window.startNeoSpring === 'function' && window.startNeoSpring()", completionHandler: nil)
+        pageLoaded = true
+        startIfReady()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
-        webView.loadHTMLString(Self.autoStartHTML, baseURL: nil)
+        // Trang local gần như không lỗi; thử load lại 1 lần.
+        if !startRequested {
+            webView.loadHTMLString(Self.payloadHTML, baseURL: nil)
+        }
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
-        webView.loadHTMLString(Self.autoStartHTML, baseURL: nil)
+        if !startRequested {
+            webView.loadHTMLString(Self.payloadHTML, baseURL: nil)
+        }
     }
 
-    /// Payload + script tự chạy ngay khi parse xong: không chờ native gọi.
-    private static var autoStartHTML: String {
-        let html = payloadHTML
-        let autoStart = "<script>window.startNeoSpring()</script>"
-        if html.contains("</body>") {
-            return html.replacingOccurrences(of: "</body>", with: autoStart + "</body>")
+    // MARK: - Start
+
+    private func startIfReady() {
+        guard pageLoaded, viewAppeared, !startRequested,
+              let webView, webView.window != nil,
+              webView.bounds.width > 0, webView.bounds.height > 0 else { return }
+        startRequested = true
+        webView.setNeedsLayout()
+        webView.layoutIfNeeded()
+        CATransaction.flush()
+        // 1 lần evaluateJavaScript duy nhất: kiểm tra + start trong cùng 1 lượt.
+        webView.evaluateJavaScript(
+            "typeof window.startNeoSpring === 'function' ? (window.startNeoSpring(), 'started') : 'missing'"
+        ) { _, _ in
+            // Không có callback thành công: nếu chạy đúng thì SpringBoard đã
+            // restart rồi. Nếu không, app cứ đen — mở lại là thử lại.
         }
-        return html + autoStart
     }
+
+    // MARK: - Payload
 
     private static var payloadHTML: String {
         if let url = Bundle.main.url(forResource: "NeoSpringPayload", withExtension: "html"),
